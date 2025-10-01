@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { type Country, i18n, type Locale } from "@popcorntime/i18n";
+import { type Country, i18n } from "@popcorntime/i18n";
 import { Button } from "@popcorntime/ui/components/button";
 import {
 	Dialog,
@@ -25,9 +25,10 @@ import { useUpdater } from "@/hooks/useUpdater";
 import { useGlobalStore } from "@/stores/global";
 
 const accountFormSchema = z.object({
-	country: z.enum([...i18n.countries] as [Country, ...Country[]]),
-	language: z.enum([...i18n.locales] as [Locale, ...Locale[]]),
+	country: z.enum(i18n.countries),
+	language: z.enum(i18n.locales),
 });
+
 type AccountFormValues = z.infer<typeof accountFormSchema>;
 
 export function PreferencesDialog() {
@@ -98,7 +99,7 @@ export function PreferencesDialog() {
 					setSubmitted(false);
 					togglePreferences();
 					if (country !== values.country) {
-						navigate(`/browse/${values.country}`, { flushSync: true });
+						navigate("/browse", { flushSync: true });
 					}
 				});
 		},

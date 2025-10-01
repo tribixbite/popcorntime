@@ -20,6 +20,7 @@ fn main() {
       popcorntime_tauri::graphql::media,
       popcorntime_tauri::graphql::providers,
       popcorntime_tauri::graphql::set_favorites_provider,
+      popcorntime_tauri::graphql::set_favorites_multiple_providers,
       popcorntime_tauri::graphql::set_media_reaction,
       popcorntime_tauri::window::show_main_window,
       popcorntime_tauri::session::is_onboarded,
@@ -124,7 +125,6 @@ fn main() {
 
           Ok(())
         })
-        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_fs::init())

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useInfiniteScroll from "react-infinite-scroll-hook";
-import { useParams } from "react-router";
+import { useSearchParams } from "react-router";
 import { useShallow } from "zustand/shallow";
 import placeholderImg from "@/assets/placeholder.svg";
 import { BrowseMedias } from "@/components/browse";
@@ -21,7 +21,11 @@ export function BrowseRoute() {
 
 	const openMedia = useGlobalStore(state => state.openMedia);
 	const [dataAccumulator, setDataAccumulator] = useState<MediaSearch[]>([]);
-	const { kind } = useParams<{ kind: "movie" | "tv_show" }>();
+	const [searchParams] = useSearchParams();
+
+	const kind = useMemo(() => {
+		return (searchParams.get("kind") || "MOVIE") as MediaKind;
+	}, [searchParams]);
 
 	const args = useMemo(() => {
 		return {
@@ -31,15 +35,15 @@ export function BrowseRoute() {
 	}, [globalArgs, kind]);
 
 	const prevQuery = useRef<{
-		q: typeof query;
-		a: typeof args;
-		k: typeof sortKey;
-		o: typeof sortOrder;
+		query: typeof query;
+		args: typeof args;
+		sortKey: typeof sortKey;
+		sortOrder: typeof sortOrder;
 	}>({
-		q: query,
-		a: args,
-		k: sortKey,
-		o: sortOrder,
+		query: query,
+		args: args,
+		sortKey: sortKey,
+		sortOrder: sortOrder,
 	});
 
 	// Register the sidebar group for this route
@@ -111,10 +115,10 @@ export function BrowseRoute() {
 
 	useEffect(() => {
 		if (
-			prevQuery.current.q === query &&
-			prevQuery.current.a === args &&
-			prevQuery.current.k === sortKey &&
-			prevQuery.current.o === sortOrder
+			prevQuery.current.query === query &&
+			prevQuery.current.args === args &&
+			prevQuery.current.sortKey === sortKey &&
+			prevQuery.current.sortOrder === sortOrder
 		) {
 			return;
 		}
@@ -144,10 +148,10 @@ export function BrowseRoute() {
 		});
 
 		prevQuery.current = {
-			q: query,
-			a: args,
-			k: sortKey,
-			o: sortOrder,
+			query,
+			args,
+			sortKey,
+			sortOrder,
 		};
 	}, [query, args, sortKey, sortOrder]);
 

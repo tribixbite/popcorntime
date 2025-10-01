@@ -1,5 +1,5 @@
 import { Button, buttonVariants } from "@popcorntime/ui/components/button";
-import { open } from "@tauri-apps/plugin-shell";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect } from "react";
 import { Link, useNavigate } from "react-router";
 import logo from "@/assets/logo.png";
@@ -16,29 +16,22 @@ export function LoginRoute() {
 	}
 
 	useEffect(() => {
-		let disposed = false;
 		let unlisten: (() => void) | undefined;
 
-		(async () => {
-			const fn = await on.sessionServerReady.listen(event => {
-				open(event.payload.authorization_url);
+		on.sessionServerReady
+			.listen(event => {
+				openUrl(event.payload.authorization_url);
+			})
+			.then(fn => {
+				unlisten = fn;
 			});
-			if (disposed) {
-				fn();
-				return;
-			}
-			unlisten = fn;
-		})();
 
-		return () => {
-			disposed = true;
-			if (unlisten) unlisten();
-		};
+		return unlisten;
 	}, [on.sessionServerReady]);
 
 	useEffect(() => {
 		if (appBoot !== "booted") return;
-		navigate("/");
+		navigate("/", { replace: true });
 	}, [appBoot, navigate]);
 
 	return (
