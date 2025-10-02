@@ -12,7 +12,7 @@ afterEach(() => {
 describe("SettingsLoaderMount", () => {
 	it("handle valid onboarding", async () => {
 		mockIPC((cmd, _args) => {
-			if (cmd === "is_onboarded") return false;
+			if (cmd === "settings") return { onboardingComplete: false };
 		});
 
 		useGlobalStore.getState().sessionSucceeded(true);
@@ -21,14 +21,14 @@ describe("SettingsLoaderMount", () => {
 		await act(async () => {});
 
 		expect(useGlobalStore.getState().settings.status).toBe("ready");
-		expect(useGlobalStore.getState().settings.onboarded).toBe(false);
+		expect(useGlobalStore.getState().settings.onboardingComplete).toBe(false);
 
 		r.unmount();
 	});
 
 	it("handle invalid onboarding flow", async () => {
 		mockIPC((cmd, _args) => {
-			if (cmd === "is_onboarded")
+			if (cmd === "settings")
 				throw { message: "Failed to get settings", code: "errors.graphql.server" };
 		});
 
