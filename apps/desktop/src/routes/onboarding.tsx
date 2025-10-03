@@ -2,6 +2,7 @@ import { OnboardingManifest } from "@/components/onboarding/manifest";
 import { OnboardingPreferences } from "@/components/onboarding/preferences";
 import { OnboardingProviders } from "@/components/onboarding/providers";
 import { OnboardingTimeline } from "@/components/onboarding/timeline";
+import { OnboardingTOS } from "@/components/onboarding/tos";
 import { OnboardingWelcome } from "@/components/onboarding/welcome";
 
 export function OnboardingWelcomeRoute() {
@@ -22,4 +23,8 @@ export function OnboardingProvidersRoute() {
 
 export function OnboardingPreferencesRoute() {
 	return <OnboardingPreferences />;
+}
+
+export function OnboardingTOSRoute() {
+	return <OnboardingTOS />;
 }
