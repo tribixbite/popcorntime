@@ -22,7 +22,7 @@ tracing-subscriber = { version = "0.3.20", features = [
     "env-filter",
 ] }
 
-reqwest = "0.12.23"
+reqwest = { version = "0.12.23", default-features = false, features = ["rustls-tls", "json"] }
 url = "2.5.7"
 time = "0.3.44"
 jsonwebtoken = "9.3.1"
