@@ -125,16 +125,86 @@ pnpm tauri android build -- --target aarch64-linux-android
 # Location: crates/popcorntime-tauri/gen/android/app/build/outputs/apk/
 ```
 
-## Local Commit Status
+## Status
 
-The workflow has been committed locally:
-- Branch: `dev`
-- Commit: `feat: add GitHub Actions workflow for Android TV APK build`
-- Status: Ready to push (pending repository permissions)
+**Repository**: https://github.com/tribixbite/popcorntime
+**Current Workflow**: https://github.com/tribixbite/popcorntime/actions/runs/18322546797
+**Status**: ✅ Running (NDK fixes applied)
+
+### Recent Updates
+- ✅ Fixed NDK_HOME environment variable
+- ✅ Added dynamic manifest path detection
+- ✅ Copied aapt2 tools for local builds
+- ✅ Workflow triggered successfully
+
+## Local Build Setup (After GitHub Actions Completes)
+
+Once the GitHub Actions workflow completes successfully, you can set up local builds:
+
+### Step 1: Download Generated Android Project
+```bash
+# The workflow generates the Android project structure
+# Download the entire gen/android folder from the successful run
+
+# Method 1: Via GitHub CLI
+gh run download <RUN_ID> --repo tribixbite/popcorntime
+
+# Method 2: Clone and extract from successful build artifacts
+```
+
+### Step 2: Configure Gradle for Termux
+```bash
+# The project already includes aapt2 tools in tools/aapt2-arm64/
+# Create gradle.properties in the generated Android project
+
+cat > crates/popcorntime-tauri/gen/android/gradle.properties << 'EOF'
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+android.useAndroidX=true
+android.enableJetifier=true
+android.overridePathCheck=true
+android.aapt2FromMavenOverride=/data/data/com.termux/files/home/git/pop/popcorntime/tools/aapt2-arm64/aapt2
+EOF
+```
+
+### Step 3: Build Locally with Gradle
+```bash
+# Navigate to Android project
+cd crates/popcorntime-tauri/gen/android
+
+# Build the APK
+./gradlew assembleDebug
+
+# APK location
+ls -lh app/build/outputs/apk/debug/app-debug.apk
+```
+
+### Step 4: Install on Android TV
+```bash
+# Via ADB
+adb connect YOUR_TV_IP:5555
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+
+# Or copy to device
+cp app/build/outputs/apk/debug/app-debug.apk /sdcard/Download/
+```
+
+## Monitoring Current Build
+
+```bash
+# Watch build progress
+gh run watch 18322546797 --repo tribixbite/popcorntime
+
+# View live logs
+gh run view 18322546797 --repo tribixbite/popcorntime --log
+
+# Check status
+gh run list --repo tribixbite/popcorntime --workflow="Android TV APK Build"
+```
 
 ## Next Steps
 
-1. Push to your fork or request merge to main repository
-2. Trigger the workflow
-3. Download and test the APK
-4. Report any issues or improvements needed
+1. ✅ Monitor current workflow completion
+2. Download generated Android project structure
+3. Test local Gradle build with aapt2
+4. Create automated local build script
+5. Report any issues or improvements needed
