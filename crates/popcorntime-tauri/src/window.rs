@@ -64,20 +64,28 @@ fn window_builder<'a>(
   handle: &'a tauri::AppHandle,
   window_relative_url: &str,
 ) -> tauri::WebviewWindowBuilder<'a, tauri::Wry, tauri::AppHandle> {
-  tauri::WebviewWindowBuilder::new(
+  let mut builder = tauri::WebviewWindowBuilder::new(
     handle,
     MAIN_WINDOW_LABEL,
     tauri::WebviewUrl::App(window_relative_url.into()),
   )
-  .resizable(true)
   .visible(true)
-  .maximizable(false)
   .title(handle.package_info().name.clone())
-  .min_inner_size(800.0, 500.0)
-  .inner_size(800.0, 720.0)
-  .focused(true)
   .on_page_load(on_page_load_script)
-  .disable_drag_drop_handler()
+  .disable_drag_drop_handler();
+
+  // Desktop-only window configuration
+  #[cfg(not(any(target_os = "android", target_os = "ios")))]
+  {
+    builder = builder
+      .resizable(true)
+      .maximizable(false)
+      .min_inner_size(800.0, 500.0)
+      .inner_size(800.0, 720.0)
+      .focused(true);
+  }
+
+  builder
 }
 
 #[cfg(target_os = "macos")]
