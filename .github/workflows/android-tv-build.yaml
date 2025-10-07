@@ -47,6 +47,7 @@ jobs:
       - name: Install Android NDK
         run: |
           sdkmanager --install "ndk;26.1.10909125"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
 
       - name: Install dependencies
@@ -55,10 +56,28 @@ jobs:
       - name: Initialize Android target
         run: pnpm tauri android init
         working-directory: ${{ github.workspace }}
+        env:
+          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
+
+      - name: Find generated Android project
+        run: |
+          echo "Searching for generated Android project..."
+          find . -name "AndroidManifest.xml" -type f 2>/dev/null || true
+          echo "---"
+          ls -la crates/popcorntime-tauri/ || true
 
       - name: Configure for Android TV
         run: |
-          MANIFEST_PATH="crates/popcorntime-tauri/gen/android/app/src/main/AndroidManifest.xml"
+          # Find the actual manifest path
+          MANIFEST_PATH=$(find . -path "*/gen/android/*/AndroidManifest.xml" -type f | head -1)
+
+          if [ -z "$MANIFEST_PATH" ]; then
+            echo "Error: Could not find AndroidManifest.xml"
+            find . -name "AndroidManifest.xml" -type f
+            exit 1
+          fi
+
+          echo "Found manifest at: $MANIFEST_PATH"
 
           # Backup original manifest
           cp $MANIFEST_PATH ${MANIFEST_PATH}.bak
@@ -122,20 +141,30 @@ jobs:
       - name: Build Android APK
         run: pnpm tauri android build -- --target aarch64-linux-android
         env:
+          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: Find and upload APK
+        run: |
+          echo "Finding built APKs..."
+          find . -name "*.apk" -type f -path "*/outputs/apk/*" 2>/dev/null
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-tv-apk
-          path: crates/popcorntime-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          path: |
+            **/gen/android/**/outputs/apk/**/*.apk
+            **/build/outputs/apk/**/*.apk
           retention-days: 30
 
       - name: Upload debug symbols
         uses: actions/upload-artifact@v4
         with:
           name: android-debug-symbols
-          path: crates/popcorntime-tauri/gen/android/app/build/outputs/native-debug-symbols/**/*.zip
+          path: |
+            **/gen/android/**/outputs/native-debug-symbols/**/*.zip
+            **/build/outputs/native-debug-symbols/**/*.zip
           retention-days: 30
           if-no-files-found: ignore
