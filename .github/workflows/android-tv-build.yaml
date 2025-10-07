@@ -1,0 +1,141 @@
+name: Android TV APK Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+    paths:
+      - 'apps/**'
+      - 'crates/**'
+      - 'packages/**'
+
+jobs:
+  build-android-tv:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.6.4
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-linux-android
+          override: true
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: |
+          sdkmanager --install "ndk;26.1.10909125"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Initialize Android target
+        run: pnpm tauri android init
+        working-directory: ${{ github.workspace }}
+
+      - name: Configure for Android TV
+        run: |
+          MANIFEST_PATH="crates/popcorntime-tauri/gen/android/app/src/main/AndroidManifest.xml"
+
+          # Backup original manifest
+          cp $MANIFEST_PATH ${MANIFEST_PATH}.bak
+
+          # Add TV features and leanback launcher
+          cat > /tmp/manifest_update.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <!-- Indicate the app does not require a touchscreen -->
+              <uses-feature
+                  android:name="android.hardware.touchscreen"
+                  android:required="false" />
+
+              <!-- Declare leanback (TV) support -->
+              <uses-feature
+                  android:name="android.software.leanback"
+                  android:required="true" />
+
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="@string/app_name"
+                  android:roundIcon="@mipmap/ic_launcher_round"
+                  android:supportsRtl="true"
+                  android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
+                  android:usesCleartextTraffic="true">
+
+                  <activity
+                      android:name=".MainActivity"
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|screenLayout|uiMode"
+                      android:exported="true"
+                      android:launchMode="singleInstance"
+                      android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+
+                      <!-- TV Launcher Intent -->
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                      </intent-filter>
+
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          # Replace the manifest with TV-configured version
+          mv /tmp/manifest_update.xml $MANIFEST_PATH
+
+          echo "Android TV configuration complete"
+          cat $MANIFEST_PATH
+
+      - name: Build production frontend
+        run: pnpm prod:build-for-tauri
+
+      - name: Build Android APK
+        run: pnpm tauri android build -- --target aarch64-linux-android
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-tv-apk
+          path: crates/popcorntime-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          retention-days: 30
+
+      - name: Upload debug symbols
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-symbols
+          path: crates/popcorntime-tauri/gen/android/app/build/outputs/native-debug-symbols/**/*.zip
+          retention-days: 30
+          if-no-files-found: ignore
